@@ -1,0 +1,17 @@
+required_version: ">= 0.6.5"
+
+plugins:
+  commands:
+    source: https://github.com/DNXLabs/plugin-commands/archive/0.1.0.tar.gz
+
+commands:
+- name: build
+  image: docker:20.10
+  command: 'docker build -t webserver .'
+  volumes: ['.:/work', '/var/run/docker.sock:/var/run/docker.sock']
+  help: 'Build docker image.'
+- name: run
+  image: docker:20.10
+  command: 'docker run -it --rm -p 80:80 --name web webserver'
+  volumes: ['.:/work', '/var/run/docker.sock:/var/run/docker.sock']
+  help: 'Runs docker image.'
