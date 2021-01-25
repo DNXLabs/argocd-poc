@@ -30,6 +30,7 @@ jobs:
   staging_deploy:
     name: Update staging deployment
     runs-on: ubuntu-latest
+    needs: [push_to_ecr]
     container: dnxsolutions/docker-kube-tools:0.3.0
     steps:
       - name: Check out the repo
@@ -45,7 +46,10 @@ jobs:
           helm template ./charts/argocd-poc \
             --name-template argocd-poc-staging \
             --output-dir ./staging \
+            --set image.tag=$GITHUB_SHA \
             -f values-staging.yaml
+          git config --global user.name 'DNX Labs'
+          git config --global user.email 'dnxlabs@users.noreply.github.com'
           git add ./staging
           git commit -m "Updates staging deploy"
           git push origin deploy
