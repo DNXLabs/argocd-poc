@@ -27,3 +27,25 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+  staging_deploy:
+    name: Update staging deployment
+    runs-on: ubuntu-latest
+    container: dnxsolutions/docker-kube-tools:0.3.0
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+        with:
+          ref: 'deploy'
+      - name: Helm lint
+        run: |
+          helm lint ./charts/argocd-poc
+      - name: Helm template
+        run: |
+          rm -rf ./staging
+          helm template ./charts/argocd-poc \
+            --name-template argocd-poc-staging \
+            --output-dir ./staging \
+            -f values-staging.yaml
+          git add ./staging
+          git commit -m "Updates staging deploy"
+          git push origin deploy
