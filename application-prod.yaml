@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: argocd-poc-prod
-  namespace: argocd-poc-prod
+  namespace: argocd
 spec:
   project: default
   source:
