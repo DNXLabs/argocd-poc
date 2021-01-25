@@ -6,9 +6,15 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/DNXLabs/argocd-poc.git
-    targetRevision: HEAD
-    path: prod
+    repoURL: 'https://github.com/DNXLabs/argocd-poc'
+    path: prod/argocd-poc/templates
+    targetRevision: deploy
   destination:
-    server: https://kubernetes.default.svc
+    server: 'https://kubernetes.default.svc'
     namespace: argocd-poc-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

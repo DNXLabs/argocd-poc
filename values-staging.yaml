@@ -1,11 +1,7 @@
-# Default values for argocd-poc staging environment.
-
 replicaCount: 1
 
 image:
   repository: public.ecr.aws/dnxsolutions/argocd-poc
-  pullPolicy: Always
-  tag: "latest"
 
 ingress:
   enabled: true
