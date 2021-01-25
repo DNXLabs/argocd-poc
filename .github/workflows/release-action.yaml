@@ -43,6 +43,9 @@ jobs:
       - name: Helm lint
         run: |
           helm lint ./charts/argocd-poc
+      - name: Get the tag
+        id: get_tag
+        run: echo ::set-output name=tag::${GITHUB_REF#refs/tags/}
       - name: Helm template
         env:
           IMAGE_TAG: ${{ steps.get_tag.outputs.tag }}
