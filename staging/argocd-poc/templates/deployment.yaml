@@ -29,7 +29,7 @@ spec:
         - name: argocd-poc
           securityContext:
             {}
-          image: "public.ecr.aws/dnxsolutions/argocd-poc:a2259931ff0fd20f68e17ac4bf9751f1df7f9d07"
+          image: "public.ecr.aws/dnxsolutions/argocd-poc:f99f8130ef24e10791e01afd59152c82c5a21aec"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
