@@ -1,0 +1,24 @@
+---
+# Source: argocd-poc/templates/hpa.yaml
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: argocd-poc-prod
+  labels:
+    helm.sh/chart: argocd-poc-0.1.0
+    app.kubernetes.io/name: argocd-poc
+    app.kubernetes.io/instance: argocd-poc-prod
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: argocd-poc-prod
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 80
