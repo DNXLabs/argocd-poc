@@ -43,10 +43,9 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: 'deploy'
-          ${{ steps.extract_branch.outputs.branch }}
       - name: Delete manifest
         env:
-          APP_ID: pr-${{ steps.vars.outputs.branch }}
+          APP_ID: pr-${{ steps.extract_branch.outputs.branch }}
         run: |
           rm apps/$APP_ID.yaml
           git config --global user.name 'DNX Labs'
