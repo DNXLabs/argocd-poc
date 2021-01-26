@@ -15,8 +15,8 @@ jobs:
         id: extract_branch
       - name: Check out the repo
         uses: actions/checkout@v2
-        # with:
-        #   ref: ${{ steps.extract_branch.outputs.branch }}
+        with:
+          ref: ${{ steps.extract_branch.outputs.branch }}
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
