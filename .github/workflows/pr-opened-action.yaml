@@ -15,8 +15,8 @@ jobs:
         id: extract_branch
       - name: Check out the repo
         uses: actions/checkout@v2
-        with:
-          ref: ${{ steps.extract_branch.outputs.branch }}
+        # with:
+        #   ref: ${{ steps.extract_branch.outputs.branch }}
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -32,8 +32,8 @@ jobs:
           echo $
           apk add docker
           aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH_NAME .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH_NAME
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA
       - name: Save branch to file
         shell: bash
         env:
@@ -70,7 +70,7 @@ jobs:
       - name: Rendering template
         env:
           APP_ID: pr-${{ steps.vars.outputs.branch }}
-          IMAGE_TAG: ${{ steps.vars.outputs.branch }}
+          IMAGE_TAG: $GITHUB_SHA
           HOSTNAME: ${{ steps.vars.outputs.branch }}.preview.labs2.dnx.host
         run: |
           cat template.yaml \
