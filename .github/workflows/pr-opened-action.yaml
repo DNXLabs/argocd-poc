@@ -1,59 +1,87 @@
 name: Publish Docker image master
 on:
-  push:
-  # pull_request:
-  #   types: [opened, edited, synchronize, reopened]
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
 jobs:
   push_to_ecr:
     name: Push Docker image to ECR
     runs-on: ubuntu-latest
     container: dnxsolutions/aws:2.1.6-dnx1
     steps:
-      # - name: Check out the repo
-      #   uses: actions/checkout@v2
-      # - name: Configure AWS credentials
-      #   uses: aws-actions/configure-aws-credentials@v1
-      #   with:
-      #     aws-access-key-id: ${{ secrets.AWS_ECR_ACCESS_KEY_ID }}
-      #     aws-secret-access-key: ${{ secrets.AWS_ECR_SECRET_ACCESS_KEY }}
-      #     aws-region: us-east-1
-      - name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ECR_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_ECR_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
       - name: Build, tag, and push image to Amazon public ECR
         env:
           ECR_REGISTRY: public.ecr.aws
           ECR_REPOSITORY: dnxsolutions/argocd-poc
-          PR_NAME: github.event.pull_request.head.ref
+          BRANCH_NAME: ${{ github.base_ref }}
         run: |
+          echo $
           apk add docker
           aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$PR_NAME .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$PR_NAME
-  # staging_deploy:
-  #   name: Update staging deployment
-  #   runs-on: ubuntu-latest
-  #   needs: [push_to_ecr]
-  #   container: dnxsolutions/docker-kube-tools:0.3.0
-  #   steps:
-  #     - name: Check out the repo
-  #       uses: actions/checkout@v2
-  #       with:
-  #         ref: 'deploy'
-  #     - name: Helm lint
-  #       run: |
-  #         helm lint ./charts/argocd-poc
-  #     - name: Helm template
-  #       run: |
-  #         rm -rf ./staging
-  #         helm template ./charts/argocd-poc \
-  #           --name-template argocd-poc-staging \
-  #           --output-dir ./staging \
-  #           --set image.tag=$GITHUB_SHA \
-  #           -f values-staging.yaml
-  #         git config --global user.name 'DNX Labs'
-  #         git config --global user.email 'dnxlabs@users.noreply.github.com'
-  #         git add ./staging
-  #         git commit -m "Updates staging deploy"
-  #         git push origin deploy
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH_NAME .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH_NAME
+      - name: Save branch to file
+        shell: bash
+        env:
+          BRANCH_NAME: ${{ github.base_ref }}
+        run: |
+          echo $BRANCH_NAME > branch.txt
+      - name: Upload branch result
+        uses: actions/upload-artifact@v2
+        with:
+          name: branch-file
+          path: branch.txt
+  pr_deploy:
+    name: Update pr deployment
+    runs-on: ubuntu-latest
+    needs: [push_to_ecr]
+    container: dnxsolutions/docker-kube-tools:0.3.2
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+        with:
+          ref: 'deploy'
+      - name: Helm lint
+        run: |
+          helm lint ./charts/argocd-poc
+      - name: Get branch
+        uses: actions/download-artifact@v2
+        with:
+          name: branch-file
+      - name: Store branch name
+        id: vars
+        shell: bash
+        run: |
+          echo "::set-output name=branch::$(cat branch.txt)"
+      - name: Rendering template
+        env:
+          APP_ID: pr-${{ steps.vars.outputs.branch }}
+          IMAGE_TAG: ${{ steps.vars.outputs.branch }}
+          HOSTNAME: ${{ steps.vars.outputs.branch }}.preview.labs2.dnx.host
+        run: |
+          cat template.yaml \
+            | kyml tmpl \
+              -e APP_ID \
+              -e IMAGE_TAG \
+              -e HOSTNAME \
+            | tee apps/$APP_ID.yaml
+          git config --global user.name 'DNX Labs'
+          git config --global user.email 'dnxlabs@users.noreply.github.com'
+          git add ./apps/$APP_ID.yaml
+          git commit -m "Updates pr deploy"
+          git push origin deploy
+      - name: 'Comment PR'
+        uses: actions/github-script@0.3.0
+        if: github.event_name == 'pull_request' && github.event_type == 'opened'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { issue: { number: issue_number }, repo: { owner, repo }  } = context;
+            github.issues.createComment({ issue_number, owner, repo, body: '${{ steps.vars.outputs.branch }}.preview.labs2.dnx.host' });
