@@ -13,7 +13,7 @@ spec:
     helm:
       values: |
         image:
-          tag: "0bf667997553ae13d9267e47181dfdc4831f736b"
+          tag: "0d8d3b0fa263ef7ae75b0e632562cf36207c50e2"
         ingress:
           enabled: true
           annotations:
