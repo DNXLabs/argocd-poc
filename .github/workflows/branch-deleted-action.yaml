@@ -1,7 +1,6 @@
 # name: Publish Docker image master
 # on:
-#   pull_request:
-#     types: [closed]
+#   delete
 # jobs:
 #   delete_tag_from_ecr:
 #     name: Push Docker image to ECR

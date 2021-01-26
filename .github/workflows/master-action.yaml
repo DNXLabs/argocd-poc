@@ -11,12 +11,6 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
-      - name: Declare some variables
-        id: vars
-        shell: bash
-        run: |
-          echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -34,15 +28,6 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-      - name: Save sha to file
-        shell: bash
-        run: |
-          git rev-parse --short HEAD > sha-short.txt
-      - name: Upload math result for job 1
-        uses: actions/upload-artifact@v2
-        with:
-          name: sha
-          path: sha-short.txt
   staging_deploy:
     name: Update staging deployment
     runs-on: ubuntu-latest
@@ -53,29 +38,19 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: 'deploy'
-      - name: Download sha
-        uses: actions/download-artifact@v2
-        with:
-          name: sha
-      - name: Store variable SHA
-        id: vars
-        shell: bash
-        run: |
-          echo "::set-output name=sha_short::$(cat sha-short.txt)"
       - name: Helm lint
         run: |
           helm lint ./charts/argocd-poc
       - name: Rendering template
         env:
           APP_ID: argocd-poc-staging
-          IMAGE_TAG: ${{ steps.vars.outputs.sha_short }}
           HOSTNAME: argocd-poc.staging.labs2.dnx.host
         run: |
           ls
           cat template.yaml \
             | kyml tmpl \
               -e APP_ID \
-              -e IMAGE_TAG \
+              -v IMAGE_TAG=$GITHUB_SHA
               -e HOSTNAME \
             | tee apps/$APP_ID.yaml
           git config --global user.name 'DNX Labs'
