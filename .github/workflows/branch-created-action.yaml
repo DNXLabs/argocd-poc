@@ -4,74 +4,64 @@ on:
     branches-ignore:
       - master
       - deploy
+
 jobs:
   push_to_ecr:
     name: Push Docker image to ECR
     runs-on: ubuntu-latest
     container: dnxsolutions/aws:2.1.6-dnx1
     steps:
-      - name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
+      - name: Get branch names.
+        id: branch-names
+        uses: tj-actions/branch-names@v2
+
       - name: Check out the repo
         uses: actions/checkout@v2
         with:
-          ref: ${{ steps.extract_branch.outputs.branch }}
+          ref: ${{ steps.branch-names.outputs.ref_branch }}
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ECR_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_ECR_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+
       - name: Build, tag, and push image to Amazon public ECR
         env:
           ECR_REGISTRY: public.ecr.aws
           ECR_REPOSITORY: dnxsolutions/argocd-poc
-          BRANCH_NAME: ${{ steps.extract_branch.outputs.branch }}
+          BRANCH_NAME: ${{ steps.branch-names.outputs.ref_branch }}
         run: |
           echo $
           apk add docker
           aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA
-      - name: Save branch to file
-        shell: bash
-        env:
-          BRANCH_NAME: ${{ steps.extract_branch.outputs.branch }}
-        run: |
-          echo $BRANCH_NAME > branch.txt
-      - name: Upload branch result
-        uses: actions/upload-artifact@v2
-        with:
-          name: branch-file
-          path: branch.txt
+
   pr_deploy:
     name: Update pr deployment
     runs-on: ubuntu-latest
     needs: [push_to_ecr]
     container: dnxsolutions/docker-kube-tools:0.3.2
     steps:
+      - name: Get branch names.
+        id: branch-names
+        uses: tj-actions/branch-names@v2
+
       - name: Check out the repo
         uses: actions/checkout@v2
         with:
           ref: 'deploy'
+
       - name: Helm lint
         run: |
           helm lint ./charts/argocd-poc
-      - name: Get branch
-        uses: actions/download-artifact@v2
-        with:
-          name: branch-file
-      - name: Store branch name
-        id: vars
-        shell: bash
-        run: |
-          echo "::set-output name=branch::$(cat branch.txt)"
+
       - name: Rendering template
         env:
-          APP_ID: pr-${{ steps.vars.outputs.branch }}
-          HOSTNAME: ${{ steps.vars.outputs.branch }}.preview.labs2.dnx.host
+          APP_ID: pr-${{ steps.branch-names.outputs.ref_branch }}
+          HOSTNAME: ${{ steps.branch-names.outputs.ref_branch }}.preview.labs2.dnx.host
         run: |
           cat template.yaml \
             | kyml tmpl \
@@ -84,11 +74,12 @@ jobs:
           git add ./apps/$APP_ID.yaml
           git commit -m "Updates branch deploy"
           git push origin deploy
+
       - name: 'Comment PR'
         uses: mshick/add-pr-comment@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           message: |
-            Visit ${{ steps.vars.outputs.branch }}.preview.labs2.dnx.host to see your changes.
+            Visit `${HOSTNAME}` to see your changes.
           allow-repeats: false
