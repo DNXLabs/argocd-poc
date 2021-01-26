@@ -1,17 +1,22 @@
 name: Publish Docker image master
 on:
+  push:
   pull_request:
-    types: [opened, edited, synchronize, reopened]
+    types: [opened]
 jobs:
   push_to_ecr:
     name: Push Docker image to ECR
     runs-on: ubuntu-latest
     container: dnxsolutions/aws:2.1.6-dnx1
     steps:
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
       - name: Check out the repo
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.base_ref }}
+          ref: ${{ steps.extract_branch.outputs.branch }}
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -22,17 +27,17 @@ jobs:
         env:
           ECR_REGISTRY: public.ecr.aws
           ECR_REPOSITORY: dnxsolutions/argocd-poc
-          BRANCH_NAME: ${{ github.base_ref }}
+          BRANCH_NAME: ${{ steps.extract_branch.outputs.branch }}
         run: |
           echo $
           apk add docker
           aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH_NAME .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH_NAME
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA
       - name: Save branch to file
         shell: bash
         env:
-          BRANCH_NAME: ${{ github.base_ref }}
+          BRANCH_NAME: ${{ steps.extract_branch.outputs.branch }}
         run: |
           echo $BRANCH_NAME > branch.txt
       - name: Upload branch result
@@ -65,13 +70,12 @@ jobs:
       - name: Rendering template
         env:
           APP_ID: pr-${{ steps.vars.outputs.branch }}
-          IMAGE_TAG: ${{ steps.vars.outputs.branch }}
           HOSTNAME: ${{ steps.vars.outputs.branch }}.preview.labs2.dnx.host
         run: |
           cat template.yaml \
             | kyml tmpl \
               -e APP_ID \
-              -e IMAGE_TAG \
+              -v IMAGE_TAG=$GITHUB_SHA \
               -e HOSTNAME \
             | tee apps/$APP_ID.yaml
           git config --global user.name 'DNX Labs'
