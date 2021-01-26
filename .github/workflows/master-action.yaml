@@ -71,6 +71,7 @@ jobs:
           IMAGE_TAG: ${{ steps.vars.outputs.sha_short }}
           HOSTNAME: argocd-poc.staging.labs2.dnx.host
         run: |
+          ls
           cat template.yaml \
             | kyml tmpl \
               -e APP_ID \
