@@ -70,13 +70,12 @@ jobs:
       - name: Rendering template
         env:
           APP_ID: pr-${{ steps.vars.outputs.branch }}
-          IMAGE_TAG: $GITHUB_SHA
           HOSTNAME: ${{ steps.vars.outputs.branch }}.preview.labs2.dnx.host
         run: |
           cat template.yaml \
             | kyml tmpl \
               -e APP_ID \
-              -e IMAGE_TAG \
+              -v IMAGE_TAG=$GITHUB_SHA \
               -e HOSTNAME \
             | tee apps/$APP_ID.yaml
           git config --global user.name 'DNX Labs'
