@@ -1,0 +1,37 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pr-new-feature
+  namespace: argocd
+spec:
+  destination:
+    namespace: pr-new-feature
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    helm:
+      values: |
+        image:
+          tag: "216c998c924020c09ab240b9f3528258f65dd365"
+        ingress:
+          enabled: true
+          annotations:
+            kubernetes.io/ingress.class: "alb"
+            alb.ingress.kubernetes.io/scheme: "internet-facing"
+            alb.ingress.kubernetes.io/group.name: argocd-poc
+            alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-southeast-2:158947203889:certificate/44fe4011-802b-4fd1-a21e-1d4871975f10
+            alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+          hosts:
+            - host: new-feature.preview.labs2.dnx.host
+              paths: ['/*']
+      version: v3
+    path: charts/argocd-poc
+    repoURL: https://github.com/DNXLabs/argocd-poc.git
+    targetRevision: deploy
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
