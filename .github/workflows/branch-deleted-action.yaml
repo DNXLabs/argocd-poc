@@ -1,29 +1,56 @@
-# name: Publish Docker image master
-# on:
-#   delete
-# jobs:
-#   delete_tag_from_ecr:
-#     name: Push Docker image to ECR
-#     runs-on: ubuntu-latest
-#     container: dnxsolutions/aws:2.1.6-dnx1
-#     steps:
-#       - name: Check out the repo
-#         uses: actions/checkout@v2
-#       - name: Configure AWS credentials
-#         uses: aws-actions/configure-aws-credentials@v1
-#         with:
-#           aws-access-key-id: ${{ secrets.AWS_ECR_ACCESS_KEY_ID }}
-#           aws-secret-access-key: ${{ secrets.AWS_ECR_SECRET_ACCESS_KEY }}
-#           aws-region: us-east-1
-#       - name: Build, tag, and push image to Amazon public ECR
-#         env:
-#           ECR_REGISTRY: public.ecr.aws
-#           ECR_REPOSITORY: dnxsolutions/argocd-poc
-#         run: |
-#           apk add docker
-#           aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-#           aws ecr batch-delete-image --repository-name $ECR_REPOSITORY --image-ids imageTag=
-#           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA .
-#           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA
-#           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA $ECR_REGISTRY/$ECR_REPOSITORY:latest
-#           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+name: Branch deployment cleanup
+on:
+  delete:
+    branches-ignore:
+      - master
+      - deploy
+jobs:
+  # delete_tag_from_ecr:
+  #   name: Push Docker image to ECR
+  #   runs-on: ubuntu-latest
+  #   container: dnxsolutions/aws:2.1.6-dnx1
+  #   steps:
+  #     - name: Check out the repo
+  #       uses: actions/checkout@v2
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v1
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ECR_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_ECR_SECRET_ACCESS_KEY }}
+  #         aws-region: us-east-1
+  #     - name: Build, tag, and push image to Amazon public ECR
+  #       env:
+  #         ECR_REGISTRY: public.ecr.aws
+  #         ECR_REPOSITORY: dnxsolutions/argocd-poc
+  #       run: |
+  #         apk add docker
+  #         aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+  #         aws ecr batch-delete-image --repository-name $ECR_REPOSITORY --image-ids imageTag=
+  #         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA .
+  #         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA
+  #         docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA $ECR_REGISTRY/$ECR_REPOSITORY:latest
+  #         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+  delete_manifest:
+    name: Push Docker image to ECR
+    runs-on: ubuntu-latest
+    container: dnxsolutions/docker-kube-tools:0.3.2
+    steps:
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+      - name: Check out the repo
+        uses: actions/checkout@v2
+        with:
+          ref: 'deploy'
+          ${{ steps.extract_branch.outputs.branch }}
+      - name: Delete manifest
+        env:
+          APP_ID: pr-${{ steps.vars.outputs.branch }}
+        run: |
+          rm apps/$APP_ID.yaml
+          git config --global user.name 'DNX Labs'
+          git config --global user.email 'dnxlabs@users.noreply.github.com'
+          git add ./apps/$APP_ID.yaml
+          git commit -m "Remove branch manifest deploy"
+          git push origin deploy
