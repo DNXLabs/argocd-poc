@@ -16,15 +16,11 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ECR_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_ECR_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-      - name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
       - name: Build, tag, and push image to Amazon public ECR
         env:
           ECR_REGISTRY: public.ecr.aws
           ECR_REPOSITORY: dnxsolutions/argocd-poc
-          BRANCH_NAME: ${{ steps.extract_branch.outputs.branch }}
+          BRANCH_NAME: ${{ github.base_ref }}
         run: |
           echo $
           apk add docker
@@ -34,7 +30,7 @@ jobs:
       - name: Save branch to file
         shell: bash
         env:
-          BRANCH_NAME: ${{ steps.extract_branch.outputs.branch }}
+          BRANCH_NAME: ${{ github.base_ref }}
         run: |
           echo $BRANCH_NAME > branch.txt
       - name: Upload branch result
