@@ -46,18 +46,20 @@ jobs:
       - name: Get the tag
         id: get_tag
         run: echo ::set-output name=tag::${GITHUB_REF#refs/tags/}
-      - name: Helm template
+      - name: Rendering template
         env:
           IMAGE_TAG: ${{ steps.get_tag.outputs.tag }}
+          APP_ID: argocd-poc-prod
+          HOSTNAME: argocd-poc.prod.labs2.dnx.host
         run: |
-          rm -rf ./prod
-          helm template ./charts/argocd-poc \
-            --name-template argocd-poc-prod \
-            --output-dir ./prod \
-            --set image.tag=$IMAGE_TAG \
-            -f values-prod.yaml
+          cat template.yaml \
+            | kyml tmpl \
+              -e APP_ID \
+              -e IMAGE_TAG \
+              -e HOSTNAME \
+            | tee apps/$APP_ID.yaml
           git config --global user.name 'DNX Labs'
           git config --global user.email 'dnxlabs@users.noreply.github.com'
-          git add ./prod
+          git add ./apps/$APP_ID.yaml
           git commit -m "Updates prod deploy"
           git push origin deploy

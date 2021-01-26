@@ -32,7 +32,7 @@ jobs:
     name: Update staging deployment
     runs-on: ubuntu-latest
     needs: [push_to_ecr]
-    container: dnxsolutions/docker-kube-tools:0.3.0
+    container: dnxsolutions/docker-kube-tools:0.3.1
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
@@ -41,16 +41,20 @@ jobs:
       - name: Helm lint
         run: |
           helm lint ./charts/argocd-poc
-      - name: Helm template
+      - name: Rendering template
+        env:
+          APP_ID: argocd-poc-staging
+          IMAGE_TAG: $GITHUB_SHA
+          HOSTNAME: argocd-poc.staging.labs2.dnx.host
         run: |
-          rm -rf ./staging
-          helm template ./charts/argocd-poc \
-            --name-template argocd-poc-staging \
-            --output-dir ./staging \
-            --set image.tag=$GITHUB_SHA \
-            -f values-staging.yaml
+          cat template.yaml \
+            | kyml tmpl \
+              -e APP_ID \
+              -e IMAGE_TAG \
+              -e HOSTNAME \
+            | tee apps/$APP_ID.yaml
           git config --global user.name 'DNX Labs'
           git config --global user.email 'dnxlabs@users.noreply.github.com'
-          git add ./staging
+          git add ./apps/$APP_ID.yaml
           git commit -m "Updates staging deploy"
           git push origin deploy
