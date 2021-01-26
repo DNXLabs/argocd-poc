@@ -11,7 +11,7 @@ spec:
     path: charts/argocd-poc
     helm:
       values: |
-        image.tag: '{{.IMAGE_TAG}}'
+        image.tag: "{{.IMAGE_TAG}}"
         ingress:
           enabled: true
           annotations:
@@ -25,8 +25,8 @@ spec:
               paths: ['/*']
       version: v3
   destination:
-    server: 'https://kubernetes.default.svc'
-    namespace: '{{.APP_ID}}'
+    server: "https://kubernetes.default.svc"
+    namespace: "{{.APP_ID}}"
   syncPolicy:
     automated:
       prune: true
