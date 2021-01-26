@@ -37,7 +37,7 @@ jobs:
       - name: Save branch to file
         shell: bash
         env:
-          BRANCH_NAME: ${{ github.base_ref }}
+          BRANCH_NAME: ${{ steps.extract_branch.outputs.branch }}
         run: |
           echo $BRANCH_NAME > branch.txt
       - name: Upload branch result
