@@ -6,7 +6,7 @@ on:
       - deploy
 jobs:
   # delete_tag_from_ecr:
-  #   name: Push Docker image to ECR
+  #   name: Delete Docker image from ECR
   #   runs-on: ubuntu-latest
   #   container: dnxsolutions/aws:2.1.6-dnx1
   #   steps:
@@ -33,11 +33,12 @@ jobs:
   delete_manifest:
     name: Delete app manifest from folder
     runs-on: ubuntu-latest
-    container: dnxsolutions/docker-kube-tools:0.3.2
+    if: github.event.ref_type == 'branch'
     steps:
-      - name: Get branch names.
-        id: branch-names
-        uses: tj-actions/branch-names@v2
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
 
       - name: Check out the repo
         uses: actions/checkout@v2
@@ -46,7 +47,7 @@ jobs:
 
       - name: Delete manifest
         env:
-          APP_ID: pr-${{ steps.branch-names.outputs.ref_branch }}
+          APP_ID: pr-${{ steps.extract_branch.outputs.branch }}
         run: |
           rm apps/$APP_ID.yaml
           git config --global user.name 'DNX Labs'
