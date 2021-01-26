@@ -11,7 +11,8 @@ spec:
     path: charts/argocd-poc
     helm:
       values: |
-        image.tag: "{{.IMAGE_TAG}}"
+        image:
+          tag: "{{.IMAGE_TAG}}"
         ingress:
           enabled: true
           annotations:
