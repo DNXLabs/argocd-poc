@@ -17,17 +17,20 @@ jobs:
       #     aws-access-key-id: ${{ secrets.AWS_ECR_ACCESS_KEY_ID }}
       #     aws-secret-access-key: ${{ secrets.AWS_ECR_SECRET_ACCESS_KEY }}
       #     aws-region: us-east-1
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
       - name: Build, tag, and push image to Amazon public ECR
         env:
           ECR_REGISTRY: public.ecr.aws
           ECR_REPOSITORY: dnxsolutions/argocd-poc
           PR_NAME: github.event.pull_request.head.ref
         run: |
-          echo $PR_NAME
-          # apk add docker
-          # aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
-          # docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$PR_NAME .
-          # docker push $ECR_REGISTRY/$ECR_REPOSITORY:$PR_NAME
+          apk add docker
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$PR_NAME .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$PR_NAME
   # staging_deploy:
   #   name: Update staging deployment
   #   runs-on: ubuntu-latest
