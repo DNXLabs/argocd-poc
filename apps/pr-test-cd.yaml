@@ -12,7 +12,7 @@ spec:
   source:
     helm:
       values: |
-        image.tag: '$GITHUB_SHA'
+        image.tag: '27ac833111b4442cedf7cb93ff47416bbb155889'
         ingress:
           enabled: true
           annotations:
