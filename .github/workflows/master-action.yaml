@@ -49,7 +49,7 @@ jobs:
           cat template.yaml \
             | kyml tmpl \
               -e APP_ID \
-              -v IMAGE_TAG=$GITHUB_SHA
+              -v IMAGE_TAG=$GITHUB_SHA \
               -e HOSTNAME \
             | tee apps/$APP_ID.yaml
           git config --global user.name 'DNX Labs'
