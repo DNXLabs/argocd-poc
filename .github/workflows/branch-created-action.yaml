@@ -81,5 +81,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           message: |
-            Visit ${HOSTNAME} to see your changes.
+            Visit `${{ steps.branch-names.outputs.ref_branch }}.preview.labs2.dnx.host` to see your changes.
           allow-repeats: false
