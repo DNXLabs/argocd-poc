@@ -46,7 +46,6 @@ jobs:
           APP_ID: argocd-poc-staging
           HOSTNAME: argocd-poc.staging.labs2.dnx.host
         run: |
-          ls
           cat template.yaml \
             | kyml tmpl \
               -e APP_ID \
